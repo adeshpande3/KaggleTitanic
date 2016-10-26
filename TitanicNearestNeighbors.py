@@ -12,13 +12,16 @@ Xtrain=[] # Will contain the characteristic data for each passenger. Xtrain will
 		  # contain info about the passenger's class, sex, age, siblings, parch,
 		  # fare, and cabin, and embark status
 Ytrain=[] # WIll contain a binary label for whether each passenger survived
-Xtest=[] 
+Xtest=[] # Will contain the characteristic data for the passengers in the test set
 numTrainExamples = 891
 numTestExamples = 418
 
 # The next few functions are going to serve as preprocessing steps for the different
 # features found in the input. Preprocessing will mainly end up being mean normalization
-# and filling in blank values
+# and filling in blank values. The main process function (below) just applies mean 
+# normalization to the values in the set. However, we need specific process functions
+# for characteristics like gender, where we have to assign a number value to the 
+# characteristic of male or female. 
 
 def process(pclass):
 	pclass = [float(x) for x in pclass]
@@ -32,20 +35,20 @@ def processGender(gender):
 	for x in gender:
 		if (x == "male"):
 			genderToNum.append(-.5)
-		else:
+		else: # x is female
 			genderToNum.append(.5)
 	return genderToNum
 
 def processAge(age):
 	ageWithoutBlanks=[]
 	for x in age:
-		if (x != ""):
+		if (x != ""): 
 			ageWithoutBlanks.append(x)
 	ageWithoutBlanks = [float(x) for x in ageWithoutBlanks]
 	mean = sum(ageWithoutBlanks) / float(len(ageWithoutBlanks))
 	my_range = max(ageWithoutBlanks) - min(ageWithoutBlanks)
 	for x in range(0,len(age)):
-		if (age[x] == ""):
+		if (age[x] == ""): # If there is a blank value, then just set it to mean
 			age[x] = mean
 	age = [float(x) for x in age]
 	age = [(x-mean)/my_range for x in age]
@@ -82,6 +85,7 @@ def processEmbarked(embarked):
 		else:
 			embarkedToNum.append(0)
 	return embarkedToNum
+
 # First job is to read in the data from the training data that Kaggle provides. This
 # training data is in the form of a csv file. This CSV file should be in the same
 # directory as this program. 
@@ -92,12 +96,14 @@ skip = True
 train_file = open('train.csv')
 csv_file = csv.reader(train_file)
 
+# Creating temporary lists where we store data for each feature/characteristic
 gender,Pclass,age,sibSP,parch,fare,cabin,embarked = ([] for i in range(8))
 
 for row in csv_file:
 	if (skip == True):
 		skip = False
 		continue
+	# Filling lists with values from train.csv
 	Ytrain.append(row[1]) 
 	Pclass.append(row[2]) 
 	gender.append(row[4]) 
@@ -107,7 +113,8 @@ for row in csv_file:
 	fare.append(row[9]) 
 	cabin.append(row[10]) 
 	embarked.append(row[11]) 
-	
+
+# Processing each feature list	
 Pclass = process(Pclass)
 gender = processGender(gender)
 age = processAge(age)
@@ -117,10 +124,12 @@ fare = processFare(fare)
 cabin = processCabin(cabin)
 embarked = processEmbarked(embarked)
 
+# Adding values from previous feature lists to one large Xtrain list of lists
 for x in range(0,numTrainExamples):
 	Xtrain.append([Pclass[x],gender[x],age[x],sibSP[x],
 		parch[x],fare[x],cabin[x],embarked[x]])
 
+# Repeating same process for test file (except we don't know Ytest)
 skip = True
 test_file = open('test.csv')
 csv_file2 = csv.reader(test_file)
@@ -153,24 +162,27 @@ for x in range(0,numTestExamples):
 	Xtest.append([Pclass[x],gender[x],age[x],sibSP[x],
 		parch[x],fare[x],cabin[x],embarked[x]])
 
+# Representing the list of lists as numpy arrays so that we can 
+# use the different scikit functions. 
 Xtrain = np.asarray(Xtrain)
 Xtest = np.asarray(Xtest)
 Ytrain = np.asarray(Ytrain)
 
-neigh = KNeighborsClassifier(n_neighbors=5)
+# Number of neighbors is a hyperparameter. I found that 17 has gotten the 
+# highest accuracy for the Kaggle competition
+neigh = KNeighborsClassifier(n_neighbors=17)
 print 'Fitting Nearest Neighbors'
 neigh.fit(Xtrain, Ytrain)
 results = np.ones((numTestExamples,2))
-counter = 892
+counter = numTrainExamples + 1
 
-#Saving predictions into a test file that can be uploaded to Kaggle
-#NOTE: You have to add a header row before submitting the txt file
 print 'Predicting outputs for testing dataset'
 for x in range(0,numTestExamples):
 	print (neigh.predict(Xtest[x]))
 	results[x,1] = (neigh.predict(Xtest[x]))[0]
 	results[x,0] = counter
 	counter = counter + 1
+
+#Saving predictions into a test file that can be uploaded to Kaggle
+#NOTE: You have to add a header row before submitting the txt file
 np.savetxt('result.csv', results, delimiter=',', fmt = '%i') 
-
-
