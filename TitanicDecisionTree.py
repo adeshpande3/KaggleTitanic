@@ -1,11 +1,12 @@
 from __future__ import division
 import scipy
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn import tree
 import numpy as np
 import csv
 import sys
+import pydotplus 
 
-# This program will use K Nearest Neighbors as a machine learning algorithm that predicts
+# This program will use Decision Trees as a machine learning algorithm that predicts
 # survival on the Titanic based on a number of characterics about every passenger. 
 
 Xtrain=[] # Will contain the characteristic data for each passenger. Xtrain will 
@@ -159,19 +160,26 @@ Ytrain = np.asarray(Ytrain)
 
 # Number of neighbors is a hyperparameter. I found that 17 has gotten the 
 # highest accuracy for the Kaggle competition
-neigh = KNeighborsClassifier(n_neighbors=17)
-print 'Fitting Nearest Neighbors'
-neigh.fit(Xtrain, Ytrain)
+clf = tree.DecisionTreeClassifier()
+print 'Fitting Decision Tree'
+clf = clf.fit(Xtrain, Ytrain)
 results = np.ones((numTestExamples,2))
 counter = numTrainExamples + 1
 
 print 'Predicting outputs for testing dataset'
 for x in range(0,numTestExamples):
-	print (neigh.predict(Xtest[x]))
-	results[x,1] = (neigh.predict(Xtest[x]))[0]
+	print (clf.predict(Xtest[x]))
+	results[x,1] = (clf.predict(Xtest[x]))[0]
 	results[x,0] = counter
 	counter = counter + 1
 
-#Saving predictions into a test file that can be uploaded to Kaggle
-#NOTE: You have to add a header row before submitting the txt file
+# Saving predictions into a test file that can be uploaded to Kaggle
+# NOTE: You have to add a header row before submitting the txt file
 np.savetxt('result.csv', results, delimiter=',', fmt = '%i') 
+
+# Creating a PDF file that has a visualization of the decision
+# tree that has been created. 
+
+dot_data = tree.export_graphviz(clf, out_file=None) 
+graph = pydotplus.graph_from_dot_data(dot_data) 
+graph.write_pdf("TitanicTree.pdf") 
