@@ -158,8 +158,6 @@ Xtrain = np.asarray(Xtrain)
 Xtest = np.asarray(Xtest)
 Ytrain = np.asarray(Ytrain)
 
-# Number of neighbors is a hyperparameter. I found that 17 has gotten the 
-# highest accuracy for the Kaggle competition
 clf = tree.DecisionTreeClassifier()
 print 'Fitting Decision Tree'
 clf = clf.fit(Xtrain, Ytrain)

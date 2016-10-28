@@ -1,11 +1,16 @@
 from __future__ import division
+from keras.models import Sequential
+from keras.layers import Activation, Dropout, Flatten, Dense
+from keras.optimizers import SGD
+from keras.utils import np_utils
+from sklearn.neighbors import KNeighborsClassifier
+from keras import backend as K
 import scipy
 import numpy as np
-from sklearn import linear_model
 import csv
 import sys
 
-# This program will use Logistic Regression as a machine learning algorithm that predicts
+# This program will use Neural Networks as a machine learning algorithm that predicts
 # survival on the Titanic based on a number of characterics about every passenger. 
 
 Xtrain=[] # Will contain the characteristic data for each passenger. Xtrain will 
@@ -74,6 +79,13 @@ def processEmbarked(embarked):
 		else: # x is C or blank
 			embarkedToNum.append(0)
 	return embarkedToNum
+
+# This functions passes X_batch into a trained Keras model and returns the activations
+# of a given layer. 
+def get_activations(model, layer, X_batch):
+    get_activations = K.function([model.layers[0].input, K.learning_phase()], model.layers[layer].output)
+    activations = get_activations([X_batch,0])
+    return activations
 
 # First job is to read in the data from the training data that Kaggle provides. This
 # training data is in the form of a csv file. This CSV file should be in the same
@@ -156,20 +168,67 @@ for x in range(0,numTestExamples):
 Xtrain = np.asarray(Xtrain)
 Xtest = np.asarray(Xtest)
 Ytrain = np.asarray(Ytrain)
+Ytrain = np_utils.to_categorical(Ytrain, 2)
 
-logistic = linear_model.LogisticRegression(C=1e5)
-print 'Fitting Linear Regression'
-logistic.fit(Xtrain, Ytrain)
+print Ytrain.shape
+
+# NETWORK ARCHITECTURE
+model = Sequential()
+model.add(Dense(32, input_dim=8))
+model.add(Activation('relu'))
+model.add(Dropout(0.15))
+model.add(Dense(64))
+model.add(Activation('relu'))
+model.add(Dropout(0.15))
+model.add(Dense(128))
+model.add(Activation('relu'))
+model.add(Dropout(0.20))
+model.add(Dense(48))
+model.add(Activation('relu'))
+model.add(Dropout(0.25))
+model.add(Dense(16))
+model.add(Activation('relu'))
+model.add(Dropout(0.25))
+model.add(Dense(2))
+model.add(Activation('softmax'))
+
+# TRAINING
+model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
+model.fit(Xtrain, Ytrain, batch_size=32, nb_epoch=1,shuffle=True)
+
+# The idea is that I want a trained neural network for classification, but instead
+# of using the class ouputs of the network, I want the activations at a given layer, 
+# which I can then feed into a KNN
+
+activations = get_activations(model, 3, Xtest)
+
+# TESTING
+
+neigh = KNeighborsClassifier(n_neighbors=17)
+print 'Fitting Nearest Neighbors'
+XtrainNewDimensions = get_activations(model,3,Xtrain)
+neigh.fit(XtrainNewDimensions, Ytrain)
 results = np.ones((numTestExamples,2))
 counter = numTrainExamples + 1
 
 print 'Predicting outputs for testing dataset'
 for x in range(0,numTestExamples):
-	print (logistic.predict(Xtest[x]))
-	results[x,1] = (logistic.predict(Xtest[x]))[0]
+	print (neigh.predict(activations[x]))
+	results[x,1] = (neigh.predict(activations[x]))[0][0]
 	results[x,0] = counter
 	counter = counter + 1
 
-# Saving predictions into a test file that can be uploaded to Kaggle
-# NOTE: You have to add a header row before submitting the txt file
+
+#results = np.ones((numTestExamples,2))
+#counter = numTrainExamples + 1
+#print 'Predicting outputs for testing dataset'
+#temp = model.predict_classes( Xtest, batch_size=32, verbose=1)
+
+#for num in range(0,numTestExamples):	
+#	results[num,1] = temp[num]
+#	results[num,0] = counter
+#	counter = counter + 1
+
+#Saving predictions into a test file that can be uploaded to Kaggle
+#NOTE: You have to add a header row before submitting the txt file
 np.savetxt('result.csv', results, delimiter=',', fmt = '%i') 
