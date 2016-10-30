@@ -34,9 +34,9 @@ def processGender(gender):
 	genderToNum=[]
 	for x in gender:
 		if (x == "male"):
-			genderToNum.append(-.5)
+			genderToNum.append(-1)
 		else: # x is female
-			genderToNum.append(.5)
+			genderToNum.append(1)
 	return genderToNum
 
 def processAgeorFare(age):
@@ -59,18 +59,34 @@ def processCabin(cabin):
 	cabinToNum=[]
 	for x in gender:
 		if (x == ""):
-			cabinToNum.append(-.5)
+			cabinToNum.append(-1)
 		else:
-			cabinToNum.append(.5)
+			cabinToNum.append(1)
 	return cabinToNum
+
+def processName(name):
+	nameToNum=[]
+	rareTitles=['Dona', 'Lady', 'the Countess','Capt', 'Col', 'Don', 
+                'Dr', 'Major', 'Rev', 'Sir', 'Jonkheer']
+	skip=False
+	for x in name:
+		for y in rareTitles:
+			if ((y in x) and (skip==False)):
+				nameToNum.append(1)
+				skip=True
+		if (skip==True):
+			skip=False
+		else:
+			nameToNum.append(-1)
+	return nameToNum
 
 def processEmbarked(embarked):
 	embarkedToNum=[]
 	for x in embarked:
 		if (x == "S"):
-			embarkedToNum.append(-.5)
+			embarkedToNum.append(-1)
 		elif (x == "Q"):
-			embarkedToNum.append(0.5)
+			embarkedToNum.append(1)
 		else: # x is C or blank
 			embarkedToNum.append(0)
 	return embarkedToNum
@@ -86,7 +102,7 @@ train_file = open('train.csv')
 csv_file = csv.reader(train_file)
 
 # Creating temporary lists where we store data for each feature/characteristic
-gender,Pclass,age,sibSP,parch,fare,cabin,embarked = ([] for i in range(8))
+name,gender,Pclass,age,sibSP,parch,fare,cabin,embarked = ([] for i in range(9))
 
 for row in csv_file:
 	if (skip == True):
@@ -95,6 +111,7 @@ for row in csv_file:
 	# Filling lists with values from train.csv
 	Ytrain.append(row[1]) 
 	Pclass.append(row[2]) 
+	name.append(row[3])
 	gender.append(row[4]) 
 	age.append(row[5]) 
 	sibSP.append(row[6]) 
@@ -105,6 +122,7 @@ for row in csv_file:
 
 # Processing each feature list	
 Pclass = process(Pclass)
+name = processName(name)
 gender = processGender(gender)
 age = processAgeorFare(age)
 sibSP = process(sibSP)
@@ -115,7 +133,7 @@ embarked = processEmbarked(embarked)
 
 # Adding values from previous feature lists to one large Xtrain list of lists
 for x in range(0,numTrainExamples):
-	Xtrain.append([Pclass[x],gender[x],age[x],sibSP[x],
+	Xtrain.append([Pclass[x],name[x],gender[x],age[x],sibSP[x],
 		parch[x],fare[x],cabin[x],embarked[x]])
 
 # Repeating same process for test file (except we don't know Ytest)
@@ -123,13 +141,14 @@ skip = True
 test_file = open('test.csv')
 csv_file2 = csv.reader(test_file)
 
-gender,Pclass,age,sibSP,parch,fare,cabin,embarked = ([] for i in range(8))
+name,gender,Pclass,age,sibSP,parch,fare,cabin,embarked = ([] for i in range(9))
 
 for row in csv_file2:
 	if (skip == True):
 		skip = False
 		continue
 	Pclass.append(row[1]) 
+	name.append(row[2])
 	gender.append(row[3]) 
 	age.append(row[4]) 
 	sibSP.append(row[5]) 
@@ -139,6 +158,7 @@ for row in csv_file2:
 	embarked.append(row[10]) 
 
 Pclass = process(Pclass)
+name = processName(name)
 gender = processGender(gender)
 age = processAgeorFare(age)
 sibSP = process(sibSP)
@@ -148,7 +168,7 @@ cabin = processCabin(cabin)
 embarked = processEmbarked(embarked)
 
 for x in range(0,numTestExamples):
-	Xtest.append([Pclass[x],gender[x],age[x],sibSP[x],
+	Xtest.append([Pclass[x],name[x],gender[x],age[x],sibSP[x],
 		parch[x],fare[x],cabin[x],embarked[x]])
 
 # Representing the list of lists as numpy arrays so that we can 
