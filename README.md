@@ -9,6 +9,8 @@ SVM - **76.55%**
 
 Logistic Regression - **76.55%**
 
+Random Forest (estimators = 100) - **74.61%**
+
 Decision Tree - **70.81%**
 
 
